@@ -3,3 +3,5 @@
 pre-trained
 .DS_Store
 __pycache__
+dataset
+vocab
