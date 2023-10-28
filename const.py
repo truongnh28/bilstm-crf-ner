@@ -1,0 +1,1 @@
+IMPOSSIBLE = -1e4

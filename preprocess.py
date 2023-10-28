@@ -31,6 +31,9 @@ class Vocab:
     def id2word(self, idx):
         return self.__id2word[idx]
 
+    def get_words(self):
+        return self.__word2id.keys()
+
     @staticmethod
     def build(data, max_dict_size, freq_cutoff, is_tags):
         word_counts = Counter(chain(*data))
@@ -50,15 +53,15 @@ class Vocab:
 
     @staticmethod
     def load(file_path):
-        with open(file_path, 'r', encoding='uft8') as f:
+        with open(file_path, 'r', encoding='utf8') as f:
             j = json.load(f)
         return Vocab(word2id=j['word2id'], id2word=j['id2word'])
 
 
 def main():
-    sentences, tags = read_corpus('./dataset/conll2003/test.txt')
-    sent_vocab = Vocab.build(data=sentences, max_dict_size=9490, freq_cutoff=1, is_tags=False)
-    tag_vocab = Vocab.build(data=tags, max_dict_size=9490, freq_cutoff=1, is_tags=True)
+    sentences, tags = read_corpus('./dataset/conll2003/train.txt')
+    sent_vocab = Vocab.build(data=sentences, max_dict_size=23627, freq_cutoff=1, is_tags=False)
+    tag_vocab = Vocab.build(data=tags, max_dict_size=23627, freq_cutoff=1, is_tags=True)
     sent_vocab.save('./vocab/sent_vocab.json')
     tag_vocab.save('./vocab/tag_vocab.json')
 
