@@ -5,3 +5,4 @@ pre-trained
 __pycache__
 dataset
 vocab
+ignore
