@@ -1,1 +1,1 @@
-{"word2id": {"O": 0, "<START>": 1, "<END>": 2, "B-LOC": 3, "B-ORG": 4, "B-PER": 5, "I-PER": 6, "I-ORG": 7, "B-MISC": 8, "I-LOC": 9, "I-MISC": 10, "<PAD>": 11}, "id2word": ["O", "<START>", "<END>", "B-LOC", "B-ORG", "B-PER", "I-PER", "I-ORG", "B-MISC", "I-LOC", "I-MISC", "<PAD>"]}
+{"word2id": {"O": 0, "<START>": 1, "<END>": 2, "B-LOC": 3, "B-PER": 4, "B-ORG": 5, "I-PER": 6, "I-ORG": 7, "B-MISC": 8, "I-LOC": 9, "I-MISC": 10, "<PAD>": 11}, "id2word": ["O", "<START>", "<END>", "B-LOC", "B-PER", "B-ORG", "I-PER", "I-ORG", "B-MISC", "I-LOC", "I-MISC", "<PAD>"]}
