@@ -2,7 +2,7 @@ import random
 import torch
 
 
-def read_corpus(filepath):
+def read_corpus(filepaths):
     """ Đọc bộ dữ liệu từ đường dẫn tệp đã cho.
         Tham số:
             filepath: đường dẫn tệp của bộ dữ liệu
@@ -11,25 +11,26 @@ def read_corpus(filepath):
             tags: các nhãn tương ứng
     """
     sentences, tags = [], []
-    sent, tag = ['<START>'], ['<START>']
-    with open(filepath, 'r', encoding='utf8') as f:
-        for line in f:
-            if '-DOCSTART-' in line:
-                continue
-            if line == '\n':
-                if len(sent) > 1:
-                    sentences.append(sent + ['<END>'])
-                    tags.append(tag + ['<END>'])
-                sent, tag = ['<START>'], ['<START>']
-            else:
-                line = line.split()
-                sent.append(line[0])
-                tag.append(line[3])
+    for filepath in filepaths:
+        sent, tag = ['<START>'], ['<START>']
+        with open(filepath, 'r', encoding='utf8') as f:
+            for line in f:
+                if '-DOCSTART-' in line:
+                    continue
+                if line == '\n':
+                    if len(sent) > 1:
+                        sentences.append(sent + ['<END>'])
+                        tags.append(tag + ['<END>'])
+                    sent, tag = ['<START>'], ['<START>']
+                else:
+                    line = line.split()
+                    sent.append(line[0])
+                    tag.append(line[3])
     return sentences, tags
 
 
 def generate_train_dev_dataset(filepath, sent_vocab, tag_vocab, train_proportion=0.8):
-    """ Đọc bộ dữ liệu từ đường dẫn tệp đã cho và chia nó thành các phần dành cho huấn luyện và phát triển
+    """ Đọc bộ dữ liệu từ đường dẫn tệp đã cho và chia nó thành các phần dành cho train và dev
         Tham số:
             filepath: đường dẫn tệp
             sent_vocab: từ điển câu
@@ -66,7 +67,7 @@ def batch_iter(data, batch_size=32, shuffle=True):
         batch = [data[idx] for idx in indices[i * batch_size: (i + 1) * batch_size]]
         batch = sorted(batch, key=lambda x: len(x[0]), reverse=True)
         sentences = [x[0] for x in batch]
-        tags = [x[3] for x in batch]
+        tags = [x[1] for x in batch]
         yield sentences, tags
 
 
