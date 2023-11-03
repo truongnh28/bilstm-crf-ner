@@ -1,5 +1,8 @@
 import random
 import torch
+import os.path
+from gensim.models import KeyedVectors
+import numpy as np
 
 
 def read_corpus(filepaths):
@@ -118,6 +121,22 @@ def pad(data, padded_token, device):
         padded_data.append(s + [padded_token] * (max_len - len(s)))
     return torch.tensor(padded_data, device=device), lengths
 
+
+def build_embedding_matrix(sent_vocab, embedding_size=300):
+    embedding_matrix_path = './ignore/embedding_matrix/embedding_matrix.npy'
+    if os.path.exists(embedding_matrix_path):
+        embedding_matrix = np.load(embedding_matrix_path)
+        return embedding_matrix
+    word2vec_pretrain_path = './pre-trained/glove.42B.300d_word2vec.txt'
+    word2vec_model = KeyedVectors.load_word2vec_format(word2vec_pretrain_path, binary=False)
+
+    embedding_matrix = np.random.randn(len(sent_vocab), embedding_size) * 0.01
+    word2id = sent_vocab.get_word2id().items()
+    for word, idx in word2id:
+        if word in word2vec_model:
+            embedding_matrix[idx] = word2vec_model[word]
+    np.save('ignore/embedding_matrix/embedding_matrix.npy', embedding_matrix)
+    return embedding_matrix
 
 def print_var(**kwargs):
     for k, v in kwargs.items():
