@@ -2,7 +2,7 @@ import json
 from collections import Counter
 from itertools import chain
 
-from utils import read_corpus
+from utils import read_corpus, build_embedding_matrix
 
 
 class Vocab:
@@ -58,13 +58,18 @@ class Vocab:
         return Vocab(word2id=j['word2id'], id2word=j['id2word'])
 
 
-def main():
-    sentences, tags = read_corpus('./dataset/conll2003/train.txt')
-    sent_vocab = Vocab.build(data=sentences, max_dict_size=23627, freq_cutoff=1, is_tags=False)
-    tag_vocab = Vocab.build(data=tags, max_dict_size=23627, freq_cutoff=1, is_tags=True)
-    sent_vocab.save('./vocab/sent_vocab.json')
-    tag_vocab.save('./vocab/tag_vocab.json')
 
+def main():
+    sentences, tags = read_corpus(['./ignore/dataset/conll2003/valid.txt', './ignore/dataset/conll2003/train.txt', './ignore/dataset/conll2003/test.txt'])
+    sent_vocab = Vocab.build(data=sentences, max_dict_size=30293, freq_cutoff=1, is_tags=False)
+    tag_vocab = Vocab.build(data=tags, max_dict_size=30293, freq_cutoff=1, is_tags=True)
+    sent_vocab.save('./ignore/vocab/sent_vocab.json')
+    tag_vocab.save('./ignore/vocab/tag_vocab.json')
+
+    build_embedding_matrix(sent_vocab = Vocab.load('./ignore/vocab/sent_vocab.json'))
+    # train_data, dev_data = utils.generate_train_dev_dataset('./ignore/dataset/conll2003/valid.txt', sent_vocab, tag_vocab)
+    # print(train_data)
+    # print(dev_data)
 
 if __name__ == '__main__':
     main()
