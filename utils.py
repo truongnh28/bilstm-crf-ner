@@ -143,6 +143,137 @@ def print_var(**kwargs):
         print(k, v)
 
 
+# Hàm chuyển đổi ner results sang cặp (text, entity)
+def ner_to_tuples(ner_results, original_text):
+    # Sắp xếp ner_results theo chỉ số start
+    sorted_entities = sorted(ner_results, key=lambda x: x['start'])
+
+    # Lưu kết quả cuối cùng
+    final_results = []
+    last_end = 0
+
+    # Duyệt qua từng entity và tạo cặp
+    for entity in sorted_entities:
+        # Thêm văn bản không phải entity
+        if entity['start'] > last_end:
+            final_results.append((original_text[last_end:entity['start']], None))
+
+        # Chuẩn bị word để gộp ## tokens nếu có
+        word = entity['word'].replace('##', '')
+
+        # Kiểm tra xem có phải tiếp tục của entity cũ không
+        if final_results and final_results[-1][1] == entity['entity'][2:]:
+            # Gộp với tuple cuối cùng nếu cùng entity
+            prev_text, prev_label = final_results.pop()
+            word = f'{prev_text} {word}'
+
+        # Tạo một cặp mới cho từ entity
+        final_results.append((word, entity['entity'][2:]))
+
+        # Cập nhật vị trí kết thúc cuối cùng
+        last_end = entity['end']
+
+    # Thêm phần cuối cùng của văn bản nếu còn
+    if last_end < len(original_text):
+        final_results.append((original_text[last_end:], None))
+
+    # Gộp các từ cùng entity liên tiếp
+    merged_results = []
+    for text, entity in final_results:
+        if merged_results and merged_results[-1][1] == entity:
+            merged_text, _ = merged_results.pop()
+            text = f'{merged_text} {text}'
+        merged_results.append((text, entity))
+
+    return merged_results
+
+
+
+def convert_ner_results_to_tuples(ner_results):
+    converted_results = []
+    current_entity = None
+    current_word = ""
+
+    for word, tag in ner_results:
+        if tag == 'O':  # Outside any named entity
+            if current_entity:  # Finish the current entity if there is one
+                converted_results.append((current_word.strip(), current_entity))
+                current_word, current_entity = "", None
+            converted_results.append((word, None))
+        elif tag.startswith('B-'):  # Beginning of a named entity
+            if current_entity:  # Finish the previous entity if there is one
+                converted_results.append((current_word.strip(), current_entity))
+            current_entity = tag.split('-')[1]  # Set the new entity type
+            current_word = word  # Start the word for the new entity
+        elif tag.startswith('I-') and current_entity:  # Inside a named entity
+            current_word += " " + word  # Add word to the current entity
+        elif tag.startswith('I-') and not current_entity:  # Entity without a beginning
+            # Handle case where I- tag is without B- tag, treat it as beginning
+            current_entity = tag.split('-')[1]
+            current_word = word
+        elif word == '<UNK>':  # Special handling for unknown tokens
+            # Decide how to handle <UNK> based on context
+            # Here we just ignore it, but you might need different logic
+            pass
+
+    # Add last entity if there was one when the loop ended
+    if current_entity:
+        converted_results.append((current_word.strip(), current_entity))
+
+    # Add non-entity text if it's trailing after last entity
+    if current_word and not current_entity:
+        converted_results.append((current_word, None))
+
+    converted_ner_results = converted_results
+    filtered_ner_results = [item for item in converted_ner_results if item[0] not in ('<UNK>', '<END>')]
+
+    return filtered_ner_results
+
+
+def process_ner_results(ner_results):
+    # Khởi tạo các biến
+    processed_results = []
+    current_phrase = ""
+    current_type = None
+    buffer_text = ""  # Dùng để lưu văn bản không phải là entity giữa các entities
+
+    # Duyệt qua tất cả các kết quả
+    for word, entity in ner_results:
+        if entity == 'O':  # Nếu không phải là entity
+            # Nếu có một entity đang mở, thêm nó vào trước khi tiếp tục với văn bản
+            if current_type:
+                processed_results.append((current_phrase, current_type))
+                current_phrase, current_type = "", None  # Đặt lại sau khi thêm entity
+            # Xử lý văn bản không phải là entity, thêm vào buffer
+            if buffer_text:  # Nếu buffer không rỗng, thêm một khoảng trắng trước từ
+                buffer_text += " "
+            buffer_text += word
+        else:
+            # Xử lý trường hợp buffer text trước entity
+            if buffer_text:
+                processed_results.append((buffer_text, None))  # Thêm buffer text vào kết quả
+                buffer_text = ""  # Làm trống buffer sau khi thêm
+
+            tag_type = entity.split('-')[1] if '-' in entity else entity
+            # Bắt đầu một entity mới hoặc tiếp tục nối chuỗi của entity hiện tại
+            if entity.startswith('B-') or current_type is None or current_type != tag_type:
+                # Thêm current entity vào nếu đã có
+                if current_phrase:
+                    processed_results.append((current_phrase, current_type))
+                current_phrase, current_type = word, tag_type
+            elif entity.startswith('I-') and current_type == tag_type:
+                current_phrase += " " + word  # Nối thêm từ vào entity hiện tại
+
+    # Thêm entity cuối cùng vào nếu có
+    if current_phrase:
+        processed_results.append((current_phrase, current_type))
+
+    # Nếu còn buffer text sau entity cuối cùng, thêm nó vào
+    if buffer_text:
+        processed_results.append((buffer_text, None))
+
+    return processed_results
+
 def main():
     sentences, tags = read_corpus('dataset/conll2003/valid.txt')
     print(len(sentences), len(tags))

@@ -1,15 +1,16 @@
+import io
+import json
+
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 from preprocess import Vocab
-from gensim.models import KeyedVectors
-from gensim.scripts.glove2word2vec import glove2word2vec
-import numpy as np
-import utils
 
 
 class Bi_LSTM_CRF(nn.Module):
-    def __init__(self, sent_vocab, tag_vocab, dropout_rate=0.5, embedding_size=256, hidden_size=256):
+    def __init__(self, sent_vocab, tag_vocab, dropout_rate=0.5, embedding_size=300, hidden_size=300):
         super(Bi_LSTM_CRF, self).__init__()
         self.dropout_rate = dropout_rate
         self.embedding_size = embedding_size
@@ -17,23 +18,36 @@ class Bi_LSTM_CRF(nn.Module):
         self.sent_vocab = sent_vocab
         self.tag_vocab = tag_vocab
 
-        word2vec_pretrain_path = './pre-trained/glove.42B.300d_word2vec.txt'
-        word2vec_model = KeyedVectors.load_word2vec_format(word2vec_pretrain_path, binary=False)
+        # embedding_matrix = self.build_embedding_matrix(sent_vocab, embedding_size)
+        # embedding_tensor = torch.tensor(embedding_matrix, dtype=torch.float32)
+        # embedding_layer = nn.Embedding.from_pretrained(embedding_tensor, freeze=True)
+        # self.embedding = embedding_layer
 
-        embedding_matrix = np.random.randn(len(sent_vocab), embedding_size) * 0.01
-        word2id = sent_vocab.get_word2id()
-        for word, idx in word2id:
-            if word in word2vec_model:
-                embedding_matrix[idx] = word2vec_model[word]
-        np.save('embedding_matrix.npy', embedding_matrix)
-        embedding_tensor = torch.tensor(embedding_matrix, dtype=torch.float32)
-        embedding_layer = nn.Embedding.from_pretrained(embedding_tensor, freeze=True)
-        print(embedding_layer)
+        embedding_size = 300
+        gloveembeddings_index = {}
+        with io.open('glove.840B.300d.txt', encoding='utf8') as f:
+            for line in f:
+                values = line.split()
+                word = values[0]
+                coefs = np.asarray([item for item in values[1:] if '.' not in item], dtype='float32')
+                gloveembeddings_index[word] = coefs
 
-        print(sent_vocab)
-        self.dropout_rate = nn.Dropout(dropout_rate)
-        self.embedding = nn.Embedding(len(sent_vocab), embedding_size)
-        self.encoder = nn.LSTM(input_size=embedding_size, hidden_size=hidden_size, bidirectional=True)
+        # using vocab and Xtrain, Xvalid, get pretrained glove word embeddings
+        glove_embeds = np.zeros((len(sent_vocab), embedding_size))
+        for word in sent_vocab.get_words():
+            print(word)
+            if word in gloveembeddings_index.keys():
+                # for the pad word let the embedding be all zeros
+                glove_embeds[sent_vocab[word]] = gloveembeddings_index[word]
+            else:
+                glove_embeds[sent_vocab[word]] = np.random.randn(embedding_size)
+        word_embeds = torch.Tensor(glove_embeds)
+        # print(glove_embeds.shape) # shape (vocab_length , embedding dim)
+        self.embedding = nn.Embedding.from_pretrained(word_embeds, freeze = False)
+
+        # self.embedding = nn.Embedding(len(sent_vocab), embedding_size)
+        self.dropout = nn.Dropout(dropout_rate)
+        self.encoder = nn.LSTM(input_size=embedding_size, hidden_size=hidden_size, bidirectional=True, num_layers=5)
         self.hidden2emit_score = nn.Linear(hidden_size * 2, len(self.tag_vocab))
         self.transition = nn.Parameter(torch.randn(len(self.tag_vocab), len(self.tag_vocab)))
 
@@ -131,7 +145,7 @@ class Bi_LSTM_CRF(nn.Module):
         params = {
             'sent_vocab': self.sent_vocab,
             'tag_vocab': self.tag_vocab,
-            'args': dict(dropout_rate=self.dropout_rate, embed_size=self.embedding_size, hidden_size=self.hidden_size),
+            'args': dict(dropout_rate=self.dropout_rate, embedding_size=self.embedding_size, hidden_size=self.hidden_size),
             'state_dict': self.state_dict()
         }
         torch.save(params, filepath)
@@ -150,12 +164,12 @@ class Bi_LSTM_CRF(nn.Module):
 
 
 def main():
-    sent_vocab = Vocab.load('./vocab/sent_vocab.json')
-    tag_vocab = Vocab.load('./vocab/tag_vocab.json')
-
-    device = torch.device('cpu')
+    sent_vocab = Vocab.load('./ignore/vocab/sent_vocab.json')
+    tag_vocab = Vocab.load('./ignore/vocab/tag_vocab.json')
+    # device = torch.device('cpu')
     model = Bi_LSTM_CRF(sent_vocab, tag_vocab)
-    # print(model)
+    print(model)
+    print(model.embedding)
     # model.to(device)
     # model.save('./model.pth')
 

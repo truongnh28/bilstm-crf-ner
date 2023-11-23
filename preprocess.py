@@ -60,13 +60,20 @@ class Vocab:
 
 
 def main():
-    sentences, tags = read_corpus(['./ignore/dataset/conll2003/valid.txt', './ignore/dataset/conll2003/train.txt', './ignore/dataset/conll2003/test.txt'])
-    sent_vocab = Vocab.build(data=sentences, max_dict_size=30293, freq_cutoff=1, is_tags=False)
-    tag_vocab = Vocab.build(data=tags, max_dict_size=30293, freq_cutoff=1, is_tags=True)
-    sent_vocab.save('./ignore/vocab/sent_vocab.json')
-    tag_vocab.save('./ignore/vocab/tag_vocab.json')
-
-    build_embedding_matrix(sent_vocab = Vocab.load('./ignore/vocab/sent_vocab.json'))
+    sentences, tags = read_corpus(['./ignore/dataset/conll2003/test.txt'])
+    # print(sentences)
+    test_data = list(zip(sentences, tags))
+    # print('num of test samples: %d' % (len(test_data)))
+    # print(test_data)
+    sent_vocab = Vocab.build(data=sentences, max_dict_size=50293, freq_cutoff=1, is_tags=False)
+    tag_vocab = Vocab.build(data=tags, max_dict_size=50293, freq_cutoff=1, is_tags=True)
+    print(len(sent_vocab))
+    # print(sent_vocab.get_words())
+    print(sent_vocab['car'])
+    # sent_vocab.save('./ignore/vocab/sent_vocab.json')
+    # tag_vocab.save('./ignore/vocab/tag_vocab.json')
+    # print(sent_vocab.get_words())
+    # build_embedding_matrix(sent_vocab = Vocab.load('./ignore/vocab/sent_vocab.json'))
     # train_data, dev_data = utils.generate_train_dev_dataset('./ignore/dataset/conll2003/valid.txt', sent_vocab, tag_vocab)
     # print(train_data)
     # print(dev_data)
